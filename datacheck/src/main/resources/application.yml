@@ -1,0 +1,10 @@
+server:
+  port: 8088
+
+spring:
+  resources:
+    static-locations: classpath:templates/,classpath:static/
+
+#    view:
+#      prefix: html/
+#      suffix: .html
