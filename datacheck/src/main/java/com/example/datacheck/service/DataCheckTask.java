@@ -66,10 +66,10 @@ public class DataCheckTask implements Runnable {
                 throw new Exception(getTaskName() + "percentage is abnormal percentage");
             }
             //表的总个数和内容检测百分比、数量百分比
-            StringBuilder checkParam = new StringBuilder(getTaskName()).append("all table:")
+          /*  StringBuilder checkParam = new StringBuilder(getTaskName()).append("all table:")
                     .append(sourceAllTables.size()).append(", percentageContent:").append(percentageContent)
                     .append(", percentageCount:").append(percentageCount);
-            System.out.println(checkParam.toString());
+            System.out.println(checkParam.toString());*/
             if (sourceAllTables != null && sourceAllTables.size() > 0) {
                 selectedSourceContTables = selectRandomTableByPer(sourceAllTables, percentageContent);
                 selectedSourceCountTables = selectRandomTableByPer(sourceAllTables, percentageCount);
@@ -77,7 +77,7 @@ public class DataCheckTask implements Runnable {
                 System.out.println(getTaskName() + "source  have no tables!");
                 return;
             }
-            StringBuilder tableDescribe = new StringBuilder(getTaskName()).append("content check, ")
+          /*  StringBuilder tableDescribe = new StringBuilder(getTaskName()).append("content check, ")
                     .append("all table count:")
                     .append(sourceAllTables.size())
                     .append(", checked table count:")
@@ -90,7 +90,7 @@ public class DataCheckTask implements Runnable {
                     .append(selectedSourceCountTables.size());
 
             System.out.println(tableDescribe.toString());
-            System.out.println(tableDescribe1.toString());
+            System.out.println(tableDescribe1.toString());*/
             Map<String, Boolean> checkTableContentRes = checkTablesContent(selectedSourceContTables);
             Map<String, Boolean> checkTableRowCountRes = checkTableRowCount(selectedSourceCountTables);
             /*for (Map.Entry<String, Boolean> entry : checkTableContentRes.entrySet()) {
@@ -419,12 +419,12 @@ public class DataCheckTask implements Runnable {
 
     public static void tt(String[] args) throws Throwable {
 
-        DBConfig dbConfig = new DBConfig();
+     /*   DBConfig dbConfig = new DBConfig();
         DataCheckTask dataCheckTask = new DataCheckTask(dbConfig);
-       /* dbConfig.setTaskName("test");
+       *//* dbConfig.setTaskName("test");
         List<String> list = new ArrayList<>();
         list.add("中华");
-        list.add("华");*/
+        list.add("华");*//*
         System.out.println("table.percentage:" + System.getProperty("table.percentage"));
         String percentageString = System.getProperty("table.percentage");
         float percentage = dataCheckTask.isEmpty(percentageString) ? 0f : Float.valueOf(percentageString.trim());
@@ -439,7 +439,7 @@ public class DataCheckTask implements Runnable {
         Map<String, String> res = dataCheckTask.selectRandomTableByPer(map, 0.4f);
         for (Map.Entry<String, String> entry : res.entrySet()) {
             System.out.println(entry.getKey());
-        }
+        }*/
     }
 
 
@@ -504,9 +504,9 @@ public class DataCheckTask implements Runnable {
                 throw new Exception("table.limit.count is abnormal,value:"+sampleCount);
             }
             //前一万条
-            String sql = sqlPre + tableName + " order by " + primary + " " + "asc" + " limit "+sampleCount;
+            String sql = sqlPre + tableName + " order by " + primary + " " + "asc" + " limit "+this.getLimit();
             //后一万条
-            String sql1 = sqlPre + tableName + " order by " + primary + " " + "desc" + " limit "+sampleCount;
+            String sql1 = sqlPre + tableName + " order by " + primary + " " + "desc" + " limit "+this.getLimit();
             rsPre = stmt.executeQuery(sql);
             rsSuffix = stmt1.executeQuery(sql1);
             rsmd = (ResultSetMetaData) rsPre.getMetaData();

@@ -1,5 +1,6 @@
 package com.example.datacheck.config;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -8,13 +9,15 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * created by yuanjunjie on 2020/5/8 6:41 PM
  */
 public class DBConfigTool {
-    public static List<DBConfig> readFromXlsx(String path) throws Exception {
+    public static Map<String,List<DBConfig>> readFromXlsx(String path) throws Exception {
         //List<DBConfig> list = new ArrayList<>();
         FileInputStream stream = new FileInputStream(path);
         return readFromXlsx(stream);
@@ -22,11 +25,13 @@ public class DBConfigTool {
     }
 
 
-    public static List<DBConfig> readFromXlsx(InputStream inputStream) throws Exception {
+    public static Map<String,List<DBConfig>> readFromXlsx(InputStream inputStream) throws Exception {
         List<DBConfig> list = new ArrayList<>();
+        Map<String,List<DBConfig>> tasks = new HashMap<>();
         //FileInputStream stream = new FileInputStream(path);
         XSSFWorkbook readWorkbook = new XSSFWorkbook(inputStream);
         XSSFSheet sheet = readWorkbook.getSheetAt(0);//得到指定名称的Sheet
+        String taskId =  DigestUtils.md5Hex(inputStream);
         boolean isFirst = true;
         for (Row row : sheet) {
             if (isFirst) {
@@ -77,8 +82,9 @@ public class DBConfigTool {
             }
             list.add(config);
         }
+        tasks.put(taskId,list);
         inputStream.close();
-        return list;
+        return tasks;
     }
 
 
@@ -125,11 +131,11 @@ public class DBConfigTool {
 
 
     public static void tt(String[] args) {
-        try {
+       /* try {
             List<DBConfig> list = readFromXlsx("/Users/yuanjunjie/works/项目文档/腾云忆想/项目文件/DB割接辅助工具/db-verify_v1.2.0/批量创建任务&导出任务详情模版.xlsx");
             System.out.println("Read==>"+list);
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
     }
 }

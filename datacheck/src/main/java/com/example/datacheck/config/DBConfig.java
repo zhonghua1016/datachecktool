@@ -5,6 +5,7 @@ package com.example.datacheck.config;
  * created by yuanjunjie on 2020/5/8 6:41 PM
  */
 public class DBConfig {
+
     private String taskName;
     private String srcIp;
     private Integer srcPort;
@@ -88,6 +89,7 @@ public class DBConfig {
     public void setDestPassword(String destPassword) {
         this.destPassword = destPassword;
     }
+
 
     @Override
     public String toString() {
