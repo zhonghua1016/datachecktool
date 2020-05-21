@@ -1,6 +1,5 @@
 package com.example.datacheck.config;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -9,29 +8,17 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * created by yuanjunjie on 2020/5/8 6:41 PM
  */
 public class DBConfigTool {
-    public static Map<String,List<DBConfig>> readFromXlsx(String path) throws Exception {
-        //List<DBConfig> list = new ArrayList<>();
-        FileInputStream stream = new FileInputStream(path);
-        return readFromXlsx(stream);
-
-    }
-
-
-    public static Map<String,List<DBConfig>> readFromXlsx(InputStream inputStream) throws Exception {
+    public static List<DBConfig> readFromXlsx(InputStream stream) throws Exception {
         List<DBConfig> list = new ArrayList<>();
-        Map<String,List<DBConfig>> tasks = new HashMap<>();
-        //FileInputStream stream = new FileInputStream(path);
-        XSSFWorkbook readWorkbook = new XSSFWorkbook(inputStream);
+//        FileInputStream stream = new FileInputStream(path);
+        XSSFWorkbook readWorkbook = new XSSFWorkbook(stream);
         XSSFSheet sheet = readWorkbook.getSheetAt(0);//得到指定名称的Sheet
-        String taskId =  DigestUtils.md5Hex(inputStream);
         boolean isFirst = true;
         for (Row row : sheet) {
             if (isFirst) {
@@ -39,6 +26,7 @@ public class DBConfigTool {
                 continue;
             }
             DBConfig config = new DBConfig();
+            config.setId(list.size());
             config.setTaskName(getString(row.getCell(0)));
             config.setSrcIp(getString(row.getCell(1)));
             if (isEmptyText(config.getSrcIp())) {
@@ -74,19 +62,17 @@ public class DBConfigTool {
             if (isEmptyText(config.getDestName())) {
                 throw new Exception("任务["+config.getTaskName()+"]目标数据库用户名为空");
             }
-            //config.setDestPassword("");
-
+            config.setDestPassword("");
+/*
             config.setDestPassword(getString(row.getCell(8)));
             if (isEmptyText(config.getDestPassword())) {
                 throw new Exception("任务["+config.getTaskName()+"]目标数据库密码为空");
-            }
+            }*/
             list.add(config);
         }
-        tasks.put(taskId,list);
-        inputStream.close();
-        return tasks;
+        stream.close();
+        return list;
     }
-
 
     private static Integer getPort(Cell cell) throws Exception {
         String text = getString(cell);
@@ -130,12 +116,12 @@ public class DBConfigTool {
     }
 
 
-    public static void tt(String[] args) {
-       /* try {
-            List<DBConfig> list = readFromXlsx("/Users/yuanjunjie/works/项目文档/腾云忆想/项目文件/DB割接辅助工具/db-verify_v1.2.0/批量创建任务&导出任务详情模版.xlsx");
-            System.out.println("Read==>"+list);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-    }
+//    public static void tt(String[] args) {
+//        try {
+//            List<DBConfig> list = readFromXlsx("/Users/yuanjunjie/works/项目文档/腾云忆想/项目文件/DB割接辅助工具/db-verify_v1.2.0/批量创建任务&导出任务详情模版.xlsx");
+//            System.out.println("Read==>"+list);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 }

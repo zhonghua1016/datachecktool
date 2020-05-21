@@ -37,7 +37,14 @@ public class DatacheckApplication {
 
         //Class.forName("com.mysql.cj.jdbc.Driver");
         // String path ="/Users/macbook/Desktop/translate/test.xlsx";
-       /* String taskPath = System.getProperty("task.path");
+        SpringApplication.run(DatacheckApplication.class, args);
+
+
+    }
+
+
+    private static void doCheck(String[] args) throws Throwable  {
+        String taskPath = System.getProperty("task.path");
 
         if (StringUtils.isNullOrEmpty(taskPath)) {
             System.out.println("ERROR: please input db config path, -Dtask.path=?");
@@ -100,20 +107,13 @@ public class DatacheckApplication {
 
 
 
-        // ExecutorService pool = Executors.newFixedThreadPool(4);
-        List<DBConfig> dbConfigList = DBConfigTool.readFromXlsx(taskPath);
-        for (DBConfig dbConfig : dbConfigList) {
-            System.out.println("---------------------------------------");
-            new DataCheckTask(dbConfig).run();
-
-        }
-
-*/
-        SpringApplication.run(DatacheckApplication.class, args);
-
-
-
+//        // ExecutorService pool = Executors.newFixedThreadPool(4);
+//        List<DBConfig> dbConfigList = DBConfigTool.readFromXlsx(taskPath);
+//        for (DBConfig dbConfig : dbConfigList) {
+//            System.out.println("---------------------------------------");
+//            new DataCheckTask(dbConfig).run();
+//
+//        }
     }
-
 
 }

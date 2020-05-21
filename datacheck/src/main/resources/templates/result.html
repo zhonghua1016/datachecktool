@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>欢迎页</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="plugins/jqgrid/ui.jqgrid-bootstrap.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+
+    <script src="libs/jquery.min.js"></script>
+    <script src="plugins/layer/layer.js"></script>
+    <script src="libs/bootstrap.min.js"></script>
+    <script src="libs/vue.min.js"></script>
+    <script src="plugins/jqgrid/grid.locale-cn.js"></script>
+    <script src="plugins/jqgrid/jquery.jqGrid.min.js"></script>
+    <script src="plugins/ztree/jquery.ztree.all.min.js"></script>
+    <script src="js/common.js"></script>
+    <script src="libs/ajaxupload.js"></script>
+</head>
+<body>
+
+<div id="rrapp" v-cloak>
+    <div v-show="showList" >
+
+        <div class="panel panel-default">
+            <div class="panel-heading">DB抽样检测工具</div>
+        </div>
+
+        <div class="col-sm-6">
+            <table id="jqGrid"></table>
+            <div id="jqGridPager"></div>
+        </div>
+
+        <div class="col-sm-6">
+            <table id="jqGrid2"></table>
+            <div id="jqGridPager2"></div>
+        </div>
+
+        <div class="col-sm-12" style="text-align: center; margin-top: 20px">
+            <span style="font-size: 20px">当前任务状态：{{taskState}}</span>
+        </div>
+    </div>
+
+</div>
+    <script src="js/result.js"></script>
+</body>
+</html>

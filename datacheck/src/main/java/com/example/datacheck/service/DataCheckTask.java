@@ -2,7 +2,10 @@ package com.example.datacheck.service;
 
 import com.example.datacheck.ConstantTool;
 import com.example.datacheck.config.DBConfig;
+import com.example.datacheck.dto.TableSchemaRes;
+import com.example.datacheck.dto.TaskResult;
 import org.apache.commons.codec.digest.DigestUtils;
+import sun.security.pkcs11.Secmod;
 
 
 import java.io.*;
@@ -17,10 +20,12 @@ import java.util.*;
  * @description: TODO
  * @date 2020-05-0821:28
  */
-public class DataCheckTask implements Runnable {
-    static final String basePath = System.getProperty("user.dir");
+public class DataCheckTask  {
+   public static final String basePath = System.getProperty("user.dir");
+   public static String resultBasePath = basePath+"/"+ "result.zip";
+
     static String sampleCount = System.getProperty("table.limit.count","10000");
-    //内容检测比例
+
     private String contentPer ;
     //数量检测比例
     private String countPer;
@@ -38,17 +43,31 @@ public class DataCheckTask implements Runnable {
     }
 
     public DataCheckTask(DBConfig dbConfig,String contentPer,String countPer,String limit) {
-        this.contentPer = contentPer;
-        this.countPer = countPer;
-        this.limit = limit;
 
         this.dbConfig = dbConfig;
+        this.countPer =countPer;
+        this.contentPer = contentPer;
+        this.limit =limit;
 
     }
 
-    @Override
-    public void run() {
+
+    public  Map<String,TaskResult> run() throws Throwable {
+        Map<String,TaskResult> taskRes = new HashMap<>();
+        TaskResult taskConentResult =new TaskResult();
+        TaskResult taskCountResult =new TaskResult();
         try {
+            taskConentResult.setDbName(dbConfig.getSrcIp());
+            taskCountResult.setDbName(dbConfig.getSrcIp());
+
+            taskCountResult.setDownloadUrl(ConstantTool.RESULT_URL);
+            taskConentResult.setDownloadUrl(ConstantTool.RESULT_URL);
+
+
+            taskConentResult.setTaskName(dbConfig.getTaskName());
+            taskCountResult.setTaskName(dbConfig.getTaskName());
+
+            Map<String,TaskResult> checkRes= new HashMap<>();
 
             System.out.println(getTaskName() + "begin run....................");
             Map<String, String> sourceAllTables = getAllTables(dbConfig.getSrcIp(), dbConfig.getSrcPort().toString(), dbConfig.getSrcPassword(), dbConfig.getSrcName());
@@ -66,18 +85,24 @@ public class DataCheckTask implements Runnable {
                 throw new Exception(getTaskName() + "percentage is abnormal percentage");
             }
             //表的总个数和内容检测百分比、数量百分比
-          /*  StringBuilder checkParam = new StringBuilder(getTaskName()).append("all table:")
+           /* StringBuilder checkParam = new StringBuilder(getTaskName()).append("all table:")
                     .append(sourceAllTables.size()).append(", percentageContent:").append(percentageContent)
                     .append(", percentageCount:").append(percentageCount);
             System.out.println(checkParam.toString());*/
             if (sourceAllTables != null && sourceAllTables.size() > 0) {
+
                 selectedSourceContTables = selectRandomTableByPer(sourceAllTables, percentageContent);
+                taskConentResult.setTotalTableNum(selectedSourceContTables.size());
                 selectedSourceCountTables = selectRandomTableByPer(sourceAllTables, percentageCount);
+                taskCountResult.setTotalTableNum(selectedSourceCountTables.size());
+
             } else {
                 System.out.println(getTaskName() + "source  have no tables!");
-                return;
+                return checkRes;
             }
-          /*  StringBuilder tableDescribe = new StringBuilder(getTaskName()).append("content check, ")
+
+
+            /*StringBuilder tableDescribe = new StringBuilder(getTaskName()).append("content check, ")
                     .append("all table count:")
                     .append(sourceAllTables.size())
                     .append(", checked table count:")
@@ -91,19 +116,44 @@ public class DataCheckTask implements Runnable {
 
             System.out.println(tableDescribe.toString());
             System.out.println(tableDescribe1.toString());*/
+            int contentFailedCount =0;
+            int countFailedCount =0;
             Map<String, Boolean> checkTableContentRes = checkTablesContent(selectedSourceContTables);
             Map<String, Boolean> checkTableRowCountRes = checkTableRowCount(selectedSourceCountTables);
+            taskConentResult.setSuccTableNum(staticCount(checkTableContentRes,true));
+            contentFailedCount =staticCount(checkTableContentRes,false);
+            taskConentResult.setFailedTableNum(contentFailedCount);
+
+            countFailedCount = staticCount(checkTableRowCountRes,false);
+
+            taskCountResult.setSuccTableNum(staticCount(checkTableRowCountRes,true));
+            taskCountResult.setFailedTableNum(countFailedCount);
+            if(countFailedCount>0)
+                taskCountResult.setResult(ConstantTool.CHECK_FAILED_RES);
+            if(contentFailedCount>0)
+                taskConentResult.setResult(ConstantTool.CHECK_FAILED_RES);
+
+            taskRes.put(ConstantTool.COUNT_CHECK_FLAG,taskCountResult);
+            taskRes.put(ConstantTool.CONTENT_CHECK_FLAG,taskConentResult);
+
+
+
+
             /*for (Map.Entry<String, Boolean> entry : checkTableContentRes.entrySet()) {
                 System.out.println("content:" + entry.getKey() + ":" + entry.getValue());
 
             }*/
+
+
             //结果存储路径
-            StringBuilder resContentPath = new StringBuilder(basePath).append("/").append(dbConfig.getTaskName()).append("/")
-                    .append("content_check");
-            StringBuilder resCountPath = new StringBuilder(basePath).append("/").append(dbConfig.getTaskName()).append("/")
-                    .append("count_check");
-            saveMapAsFile(checkTableContentRes, resContentPath.toString());
-            saveMapAsFile(checkTableRowCountRes, resCountPath.toString());
+            StringBuilder resContentPath = new StringBuilder(basePath).append("/").append(ConstantTool.CHECK_RESULT_PATH)
+                    .append("/").append(dbConfig.getTaskName()).append("/")
+                    .append(ConstantTool.CONTENT_CHECK_FLAG);
+            StringBuilder resCountPath = new StringBuilder(basePath).append("/").append(ConstantTool.CHECK_RESULT_PATH).append("/")
+                    .append(dbConfig.getTaskName()).append("/")
+                    .append(ConstantTool.COUNT_CHECK_FLAG);
+            saveMapAsFile(getCheckFailedMap(checkTableContentRes), resContentPath.toString());
+            saveMapAsFile(getCheckFailedMap(checkTableRowCountRes), resCountPath.toString());
 
             showResponse(checkTableContentRes,getTaskName()+"==>content check");
             showResponse(checkTableRowCountRes,getTaskName()+"==>count check");
@@ -113,9 +163,50 @@ public class DataCheckTask implements Runnable {
         } catch (Throwable e) {
             System.out.println(getTaskName()+"failed" + e.getMessage());
         }
+        return taskRes;
 
 
     }
+
+    public Map<String, Boolean> getCheckFailedMap(Map<String, Boolean> sourceMap){
+        Map<String, Boolean> failedMap = new HashMap<>();
+        for(Map.Entry<String, Boolean>entry:sourceMap.entrySet()){
+            if(entry.getValue()==false)
+                failedMap.put(entry.getKey(),entry.getValue());
+        }
+        return failedMap;
+
+    }
+
+/**
+ * 根据 flag 统计数量
+ */
+   public  int staticCount(Map<String, Boolean> maps,Boolean flag){
+       int count =0;
+        for(Map.Entry<String, Boolean>entry:maps.entrySet()){
+            if(entry.getValue().equals(flag)){
+                count+=1;
+            }
+
+        }
+        return count;
+
+    }
+
+   /* public List<TaskResult>  mapResToTableSchemaRes(Map<String, Boolean> res1){
+        List<TableSchemaRes> res = new ArrayList<>();
+        for(Map.Entry<String, Boolean> entry:res1.entrySet()){
+            TableSchemaRes tableSchemaRes = new TableSchemaRes();
+            String[]database_table = entry.getKey().split(ConstantTool.DATABASE_AND_SPLIT);
+            tableSchemaRes.setDataBaseName(database_table[0]);
+            tableSchemaRes.setTable(database_table[1]);
+
+        }
+
+    }
+*/
+
+
 
     private void showResponse(Map<String, Boolean> res, String type) {
         int successCount = 0;
@@ -134,7 +225,6 @@ public class DataCheckTask implements Runnable {
         StringBuilder showRes = new StringBuilder();
 
         showRes.append(type)
-                .append(" result")
                 .append(", ")
                 .append("success:")
                 .append(successCount)
@@ -163,7 +253,7 @@ public class DataCheckTask implements Runnable {
             for (Map.Entry<String, String> entry : tables.entrySet()) {
                 Map<List<String>, Map<String, String>> sourceTable = new HashMap<>();
                 Map<List<String>, Map<String, String>> destTable = new HashMap<>();
-                //表的主键
+                //按表的某一字段进行记录
                 String primary = "";
                 String realTable[] = entry.getKey().split(ConstantTool.DATABASE_AND_SPLIT);
                 String tableName = realTable[1];
@@ -191,16 +281,16 @@ public class DataCheckTask implements Runnable {
                     tablesCheckResponse.put(entry.getKey(), false);
                     StringBuilder stringBuilder = new StringBuilder();
                     //下面形成一个/根目录/database/table/ip/error/table.txt
-                    stringBuilder.append(basePath).append("/").append(dbConfig.getTaskName()).append("/").append("error").append("/");
+                    stringBuilder.append(basePath).append("/").append(ConstantTool.CHECK_RESULT_PATH).append("/").append(dbConfig.getTaskName()).append("/").append("error").append("/");
                     stringBuilder.append("/").append(entry.getValue()).append("/").append(tableName).append("/")
-                            .append(dbConfig.getSrcIp()).append("/");
+                            .append(ConstantTool.CONTENT_CHECK_FLAG).append("/").append(dbConfig.getSrcIp()).append("/");
+
                     File file = new File(stringBuilder.toString());
                     // 重新创建文件夹 ,为了将之前的数据删除
                     if (file.exists()) {
                         file.delete();
                     }
                     file.mkdirs();
-                    Collections.sort(sourceList);
                     saveAbnormalRowAsFile(sourceList, stringBuilder.toString() + tableName + ".txt", primary);
 
                 }
@@ -218,6 +308,28 @@ public class DataCheckTask implements Runnable {
         return tablesCheckResponse;
 
     }
+
+    /**
+     * 删除文件夹
+     * @param dir
+     * @return
+     */
+
+    public static boolean deleteDir(File dir) {
+        if (dir.isDirectory()) {
+            String[] children = dir.list();
+            for (int i = 0; i < children.length; i++) {
+                boolean success = deleteDir(new File(dir, children[i]));
+                if (!success) {
+                    return false;
+                }
+            }
+        }
+        //删除空文件夹
+        return dir.delete();
+    }
+
+
 
     /**
      * 检测表的数据总数
@@ -379,8 +491,7 @@ public class DataCheckTask implements Runnable {
      * @return key databaseName+分隔符+tablsName 避免多个库中有相同表名，value为库名
      * @throws Throwable
      */
-    public Map<String, String> getAllTables(String ip, String port, String password, String user) throws Throwable {
-
+    private Map<String, String> getAllTables(String ip, String port, String password, String user) throws Throwable {
         Map<String, String> allTables = new HashMap<>();
         Connection conn = null;
         Statement stmt = null;
@@ -419,7 +530,13 @@ public class DataCheckTask implements Runnable {
 
     public static void tt(String[] args) throws Throwable {
 
-     /*   DBConfig dbConfig = new DBConfig();
+
+        Integer integer = new Integer(35);
+        float f = integer/100f;
+        System.out.println(f);
+
+
+        /*DBConfig dbConfig = new DBConfig();
         DataCheckTask dataCheckTask = new DataCheckTask(dbConfig);
        *//* dbConfig.setTaskName("test");
         List<String> list = new ArrayList<>();
@@ -472,21 +589,29 @@ public class DataCheckTask implements Runnable {
             Map<String, String> columnNameAndType = new LinkedHashMap<>();
             String columnName;
             String columnType;
-            //如果表没有主键，查询排序是按最后一字段进行排序
-            String lastName = null;
+            //如果表没有主键，查询排序是按表中所有的字段进行排序
+
+            StringBuilder allCol = new StringBuilder();
+            //记录一个表中最后一字段的名字
+            String lastName=null;
+            //按某一字段排序
+            String recordCol = null;
             //获取所有的字段name和类型
             while (colRet.next()) {
                 columnName = colRet.getString("COLUMN_NAME");
                 columnType = colRet.getString("TYPE_NAME");
                 lastName = columnName;
+                allCol.append(columnName).append(",");
                 columnNameAndType.put(columnName, columnType);
-            }
 
-            while (primaryKeyResultSet.next()) {
-                String primaryKeyColumnName = primaryKeyResultSet.getString("COLUMN_NAME");
-                primary = primaryKeyColumnName;
-                if (primary != null) {
-                    break;
+            }
+            if(primaryKeyResultSet!=null) {
+                while (primaryKeyResultSet.next()) {
+                    String primaryKeyColumnName = primaryKeyResultSet.getString("COLUMN_NAME");
+                    primary = primaryKeyColumnName;
+                    if (primary != null) {
+                        break;
+                    }
                 }
             }
 
@@ -495,23 +620,28 @@ public class DataCheckTask implements Runnable {
             stmt = conn.createStatement();
             stmt1 = conn.createStatement();
             if (isEmpty(primary)) {
+                String allColString  = allCol.toString();
+                recordCol =   allColString.substring(0,allColString.length()-1);
                 primary = lastName;
 
+            }else {
+                recordCol = primary;
             }
             primaryAndMd5.put(ConstantTool.PRINARY, primary);
-            int sampleCou = Integer.valueOf(sampleCount);
-            if(sampleCou<1){
-                throw new Exception("table.limit.count is abnormal,value:"+sampleCount);
+            int limit= Integer.valueOf(getLimit());
+            if(limit<1){
+                throw new Exception("table.limit.count is abnormal,value:"+limit);
             }
             //前一万条
-            String sql = sqlPre + tableName + " order by " + primary + " " + "asc" + " limit "+this.getLimit();
+            String sql = sqlPre + tableName + " order by " + recordCol + " " + "asc" + " limit "+getLimit();
             //后一万条
-            String sql1 = sqlPre + tableName + " order by " + primary + " " + "desc" + " limit "+this.getLimit();
+            String sql1 = sqlPre + tableName + " order by " + recordCol + " " + "desc" + " limit "+getLimit();
             rsPre = stmt.executeQuery(sql);
             rsSuffix = stmt1.executeQuery(sql1);
             rsmd = (ResultSetMetaData) rsPre.getMetaData();
-            List<String> primaryList = new ArrayList<>(10000);
-            //在当前工程目录下创建文件夹，文件夹格式/database/tableName
+            //按照某一字段记录所抽样数据
+            List<String> recordList = new ArrayList<>(10000);
+            //在当前工程目录下创建文件夹
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append(basePath).append("/").append("db").append("/").append(dbConfig.getTaskName());
             stringBuilder.append("/").append(dataBaseName).append("/").append(tableName).append("/")
@@ -526,18 +656,18 @@ public class DataCheckTask implements Runnable {
             FileOutputStream outputStream = new FileOutputStream(filePath);
             DataOutputStream objectOutputStream = new DataOutputStream(outputStream);
             //往指定文件写入前一万条数据
-            saveFile(objectOutputStream, rsmd, rsPre, primaryList, primary, columnNameAndType);
+            saveFile(objectOutputStream, rsmd, rsPre, recordList, primary, columnNameAndType);
             //往指定文件写入后一万条数据
-            saveFile(objectOutputStream, rsmd, rsSuffix, primaryList, primary, columnNameAndType);
-            Set result = new HashSet(primaryList);
-            primaryList = new ArrayList<>(result);
+            saveFile(objectOutputStream, rsmd, rsSuffix, recordList, primary, columnNameAndType);
+            /*Set result = new HashSet(recordList);
+            recordList = new ArrayList<>(result);*/
 
             String md51 = DigestUtils.md5Hex(new FileInputStream(filePath));
             primaryAndMd5.put(ConstantTool.MD5_KEY, md51);
 
             objectOutputStream.close();
             outputStream.close();
-            response.put(primaryList, primaryAndMd5);
+            response.put(recordList, primaryAndMd5);
             colRet.close();
             rsSuffix.close();
             primaryKeyResultSet.close();

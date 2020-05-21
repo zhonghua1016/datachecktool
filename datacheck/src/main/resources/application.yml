@@ -1,10 +1,15 @@
 server:
-  port: 8088
-
+  port: 8000
+  servlet:
+    context-path: /dbcheck
 spring:
+  application:
+    name: DataCheck
+  thymeleaf:
+    cache: false
   resources:
-    static-locations: classpath:templates/,classpath:static/
-
-#    view:
-#      prefix: html/
-#      suffix: .html
+    chain:
+      strategy:
+        content:
+          enabled: true
+          paths: /static/css/**,/static/js/**,/static/img/**
